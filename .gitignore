@@ -1,0 +1,10 @@
+# CMake
+out/
+
+# VS
+CMakeSettings.json
+.vs/
+
+# generated
+generated/
+bin/
