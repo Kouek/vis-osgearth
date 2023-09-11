@@ -1,3 +1,5 @@
+#include <memory>
+
 #include <osg/PositionAttitudeTransform>
 #include <osg/ShapeDrawable>
 #include <osg/Texture2D>
@@ -7,6 +9,7 @@
 #include <osgViewer/Viewer>
 
 #include <scalar_viser/direct_volume_renderer.h>
+#include <scalar_viser/marching_cube_renderer.h>
 #include <volume_loader/raw_loader.h>
 #include <volume_loader/tf_loader.h>
 
@@ -33,16 +36,16 @@ static inline osg::Node *createEarth() {
     return csn;
 }
 
+// #define TEST_DVR
+#define TEST_MARCHING_CUBE
+
+#ifdef TEST_DVR
 int main(int argc, char **argv) {
     osg::ref_ptr viewer = new osgViewer::Viewer;
     viewer->setUpViewInWindow(200, 50, 800, 600);
 
     osg::ref_ptr grp = new osg::Group;
     grp->addChild(createEarth());
-
-    osg::ref_ptr hints = new osg::TessellationHints;
-    osg::ref_ptr shape =
-        new osg::ShapeDrawable(new osg::Box(osg::Vec3(0.0f, 0.0f, 0.0f), 2, 2, 2), hints);
 
     // Create direct volume renderer
     SciVis::ScalarViser::DirectVolumeRenderer renderer;
@@ -53,12 +56,43 @@ int main(int argc, char **argv) {
             "CLOUDf01.bin", {500, 500, 100}, {8, 8, 6},
             [](const uint8_t &src) -> float { return src / 255.f; });
         auto tfTex = SciVis::VolumeLoader::TFLoader<uint8_t>::LoadFromFileToTexture("cloud_tf.txt");
-        renderer.AddVolume("cloud05", volTex, tfTex);
+        renderer.AddVolume("cloud01", volTex, tfTex);
     }
     grp->addChild(renderer.GetGroup());
 
-    viewer->setSceneData(grp.get());
+    viewer->setSceneData(grp);
     viewer->run();
 
     return 0;
 }
+#elif defined(TEST_MARCHING_CUBE)
+int main(int argc, char **argv) {
+    osg::ref_ptr viewer = new osgViewer::Viewer;
+    viewer->setUpViewInWindow(200, 50, 800, 600);
+
+    osg::ref_ptr grp = new osg::Group;
+    grp->addChild(createEarth());
+
+    // Create direct volume renderer
+    SciVis::ScalarViser::MarchingCubeCPURenderer renderer;
+
+    // Prepare volume data
+    {
+        std::array<int, 3> volDim{500, 500, 100};
+        auto volDat = SciVis::VolumeLoader::RawLoader<uint8_t, float>::LoadFromFile(
+            "CLOUDf01.bin", volDim, [](const uint8_t &src) -> float { return src / 255.f; });
+        auto volDatShared = std::make_shared<decltype(volDat)>();
+        (*volDatShared) = std::move(volDat);
+        renderer.AddVolume("cloud01", volDatShared, volDim);
+    }
+    grp->addChild(renderer.GetGroup());
+
+    if (auto opt = renderer.GetVolume("cloud01"); opt.has_value())
+        opt.value()->second.MarchingCube(30.f / 255.f);
+
+    viewer->setSceneData(grp);
+    viewer->run();
+
+    return 0;
+}
+#endif // TEST_DVR

@@ -3,7 +3,6 @@
 uniform sampler3D volTex;
 uniform sampler1D tfTex;
 
-uniform float earthRadius;
 uniform vec3 eyePos;
 uniform float dt;
 
@@ -15,7 +14,6 @@ uniform float minHeight;
 uniform float maxHeight;
 
 in vec4 vertex;
-in vec2 texCoord;
 
 vec3 intersectOuterSphere(vec3 p) {
     vec3 p2eDir = normalize(eyePos - p);
@@ -75,7 +73,6 @@ void main() {
 
     float tExit = anotherIntersectionOuterSphere(vertex.xyz, d);
     Hit hitInner = intersectInnerSphere(vertex.xyz, d);
-
     if (hitInner.isHit != 0)
         tExit = hitInner.tEntry;
 

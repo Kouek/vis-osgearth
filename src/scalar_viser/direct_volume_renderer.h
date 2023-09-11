@@ -14,8 +14,8 @@
 
 #include <scivis/callback.h>
 
-#include "shaders/generated/sphere_proxy_frag.h"
-#include "shaders/generated/sphere_proxy_vert.h"
+#include "shaders/generated/dvr_sphere_proxy_frag.h"
+#include "shaders/generated/dvr_sphere_proxy_vert.h"
 
 namespace SciVis {
 namespace ScalarViser {
@@ -26,23 +26,21 @@ class DirectVolumeRenderer {
         osg::ref_ptr<osg::Group> grp;
         osg::ref_ptr<osg::Program> program;
 
-        osg::ref_ptr<osg::Uniform> earthRadius;
         osg::ref_ptr<osg::Uniform> eyePos;
         osg::ref_ptr<osg::Uniform> dt;
 
         PerRendererParam() {
             grp = new osg::Group;
 
-            osg::ref_ptr vertShader = new osg::Shader(osg::Shader::VERTEX, sphere_proxy_vert);
-            osg::ref_ptr fragShader = new osg::Shader(osg::Shader::FRAGMENT, sphere_proxy_frag);
+            osg::ref_ptr vertShader = new osg::Shader(osg::Shader::VERTEX, dvr_sphere_proxy_vert);
+            osg::ref_ptr fragShader = new osg::Shader(osg::Shader::FRAGMENT, dvr_sphere_proxy_frag);
             program = new osg::Program;
             program->addShader(vertShader);
             program->addShader(fragShader);
 
-#define STATEMENT(name, val) name = new osg::Uniform(#name, val);
-            STATEMENT(earthRadius, static_cast<float>(osg::WGS_84_RADIUS_EQUATOR));
+#define STATEMENT(name, val) name = new osg::Uniform(#name, val)
             STATEMENT(eyePos, osg::Vec3());
-            STATEMENT(dt, static_cast<float>(osg::WGS_84_RADIUS_EQUATOR) * .001f);
+            STATEMENT(dt, static_cast<float>(osg::WGS_84_RADIUS_EQUATOR) * .0005f);
 #undef STATEMENT
         }
     };
@@ -77,8 +75,8 @@ class DirectVolumeRenderer {
         PerVolParam(osg::ref_ptr<osg::Texture3D> volTex, osg::ref_ptr<osg::Texture1D> tfTex,
                     PerRendererParam *renderer)
             : volTex(volTex), tfTex(tfTex) {
-            static const auto MinHeight = static_cast<float>(osg::WGS_84_RADIUS_EQUATOR) * 1.01f;
-            static const auto MaxHeight = static_cast<float>(osg::WGS_84_RADIUS_EQUATOR) * 1.31f;
+            static const auto MinHeight = static_cast<float>(osg::WGS_84_RADIUS_EQUATOR) * .5f;
+            static const auto MaxHeight = static_cast<float>(osg::WGS_84_RADIUS_EQUATOR) * .7f;
 
             sphere = new osg::ShapeDrawable(new osg::Sphere(osg::Vec3(0.f, 0.f, 0.f), MaxHeight),
                                             new osg::TessellationHints);
@@ -90,7 +88,7 @@ class DirectVolumeRenderer {
             };
 #define STATEMENT(name, val)                                                                       \
     name = new osg::Uniform(#name, val);                                                           \
-    states->addUniform(name);
+    states->addUniform(name)
             STATEMENT(minLatitute, deg2Rad(-23.f));
             STATEMENT(maxLatitute, deg2Rad(+23.f));
             STATEMENT(minLongtitute, deg2Rad(-20.f));
@@ -98,12 +96,11 @@ class DirectVolumeRenderer {
             STATEMENT(minHeight, MinHeight);
             STATEMENT(maxHeight, MaxHeight);
 #undef STATEMENT
-            states->addUniform(renderer->earthRadius);
             states->addUniform(renderer->eyePos);
             states->addUniform(renderer->dt);
 
-            states->setTextureAttributeAndModes(1, volTex.get(), osg::StateAttribute::ON);
-            states->setTextureAttributeAndModes(2, tfTex.get(), osg::StateAttribute::ON);
+            states->setTextureAttributeAndModes(0, volTex, osg::StateAttribute::ON);
+            states->setTextureAttributeAndModes(1, tfTex, osg::StateAttribute::ON);
 
             osg::ref_ptr cf = new osg::CullFace(osg::CullFace::BACK);
             states->setAttributeAndModes(cf);
@@ -122,14 +119,14 @@ class DirectVolumeRenderer {
 
     void AddVolume(const std::string &name, osg::ref_ptr<osg::Texture3D> volTex,
                    osg::ref_ptr<osg::Texture1D> tfTex) {
-        if (auto itr = vols.find(name); itr != vols.end())
+        if (auto itr = vols.find(name); itr != vols.end()) {
             param.grp->removeChild(itr->second.sphere);
+            vols.erase(itr);
+        }
         auto opt = vols.emplace(std::piecewise_construct, std::forward_as_tuple(name),
                                 std::forward_as_tuple(volTex, tfTex, &param));
         param.grp->addChild(opt.first->second.sphere);
     }
-
-  private:
 };
 
 } // namespace ScalarViser

@@ -44,7 +44,7 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/bin")
 add_executable(
 	${TARGET_NAME}
 	"main.cpp"
- "src/volume_loader/raw_loader.h" "src/scalar_viser/direct_volume_renderer.h" "src/scivis/callback.h" "src/volume_loader/tf_loader.h" "src/volume_loader/type.h")
+ "src/scalar_viser/marching_cube_table.h")
 target_include_directories(
 	${TARGET_NAME}
 	PRIVATE

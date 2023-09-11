@@ -85,8 +85,6 @@ template <typename KeyTy> class TFLoader {
         tex->setFilter(osg::Texture::MAG_FILTER, osg::Texture::FilterMode::LINEAR);
         tex->setFilter(osg::Texture::MIN_FILTER, osg::Texture::FilterMode::NEAREST);
         tex->setWrap(osg::Texture::WRAP_S, osg::Texture::WrapMode::CLAMP);
-        tex->setWrap(osg::Texture::WRAP_T, osg::Texture::WrapMode::CLAMP);
-        tex->setWrap(osg::Texture::WRAP_R, osg::Texture::WrapMode::CLAMP);
         tex->setInternalFormatMode(osg::Texture::InternalFormatMode::USE_IMAGE_DATA_FORMAT);
         tex->setImage(img);
 
