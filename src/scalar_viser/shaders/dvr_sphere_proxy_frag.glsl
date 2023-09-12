@@ -13,7 +13,7 @@ uniform float maxLongtitute;
 uniform float minHeight;
 uniform float maxHeight;
 
-in vec4 vertex;
+in vec3 vertex;
 
 vec3 intersectOuterSphere(vec3 p) {
     vec3 p2eDir = normalize(eyePos - p);
@@ -56,8 +56,8 @@ float anotherIntersectionOuterSphere(vec3 p, vec3 p2eDir) {
 void main() {
 //#define TEST
 #ifdef TEST
-    vec3 d = normalize(vertex.xyz - eyePos);
-    vec3 pos = vertex.xyz;
+    vec3 d = normalize(vertex - eyePos);
+    vec3 pos = vertex;
     float r = sqrt(pos.x * pos.x + pos.y * pos.y);
     float lat = atan(pos.z / r);
     float lon = atan(pos.y, pos.x);
@@ -71,12 +71,12 @@ void main() {
     if (lon > maxLongtitute)
         entryOutOfRng |= 8;
 
-    float tExit = anotherIntersectionOuterSphere(vertex.xyz, d);
-    Hit hitInner = intersectInnerSphere(vertex.xyz, d);
+    float tExit = anotherIntersectionOuterSphere(vertex, d);
+    Hit hitInner = intersectInnerSphere(vertex, d);
     if (hitInner.isHit != 0)
         tExit = hitInner.tEntry;
 
-    pos = vertex.xyz + tExit * d;
+    pos = vertex + tExit * d;
     r = sqrt(pos.x * pos.x + pos.y * pos.y);
     lat = atan(pos.z / r);
     lon = atan(pos.y, pos.x);
@@ -93,9 +93,10 @@ void main() {
     float latDlt = maxLatitute - minLatitute;
     float lonDlt = maxLongtitute - minLongtitute;
 
-    pos = vertex.xyz;
+    pos = vertex;
     r = sqrt(pos.x * pos.x + pos.y * pos.y);
     lat = atan(pos.z / r);
+    r = length(pos);
     lon = atan(pos.y, pos.x);
     r = (r - minHeight) / hDlt;
     lat = (lat - minLatitute) / latDlt;
@@ -103,8 +104,8 @@ void main() {
 
     gl_FragColor = vec4(lon, lat, r, 1);
 #else
-    vec3 d = normalize(vertex.xyz - eyePos);
-    vec3 pos = vertex.xyz;
+    vec3 d = normalize(vertex - eyePos);
+    vec3 pos = vertex;
     float r = sqrt(pos.x * pos.x + pos.y * pos.y);
     float lat = atan(pos.z / r);
     float lon = atan(pos.y, pos.x);
@@ -118,13 +119,13 @@ void main() {
     if (lon > maxLongtitute)
         entryOutOfRng |= 8;
 
-    float tExit = anotherIntersectionOuterSphere(vertex.xyz, d);
-    Hit hitInner = intersectInnerSphere(vertex.xyz, d);
+    float tExit = anotherIntersectionOuterSphere(vertex, d);
+    Hit hitInner = intersectInnerSphere(vertex, d);
 
     if (hitInner.isHit != 0)
         tExit = hitInner.tEntry;
 
-    pos = vertex.xyz + tExit * d;
+    pos = vertex + tExit * d;
     r = sqrt(pos.x * pos.x + pos.y * pos.y);
     lat = atan(pos.z / r);
     lon = atan(pos.y, pos.x);
@@ -142,13 +143,14 @@ void main() {
     float lonDlt = maxLongtitute - minLongtitute;
 
     vec4 color = vec4(0, 0, 0, 0);
-    vec3 entry2Exit = pos - vertex.xyz;
+    vec3 entry2Exit = pos - vertex;
     float tMax = length(entry2Exit);
     float tAcc = 0.f;
-    pos.xyz = vertex.xyz;
+    pos.xyz = vertex;
     do {
         r = sqrt(pos.x * pos.x + pos.y * pos.y);
         lat = atan(pos.z / r);
+        r = length(pos);
         lon = atan(pos.y, pos.x);
         if (lat < minLatitute || lat > maxLatitute || lon < minLongtitute || lon > maxLongtitute) {
             pos += dt * d;

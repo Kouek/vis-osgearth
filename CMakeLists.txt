@@ -44,7 +44,7 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/bin")
 add_executable(
 	${TARGET_NAME}
 	"main.cpp"
- "src/scalar_viser/marching_cube_table.h")
+)
 target_include_directories(
 	${TARGET_NAME}
 	PRIVATE

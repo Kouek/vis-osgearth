@@ -9,12 +9,13 @@
 #include <map>
 #include <optional>
 
-#include <osg/Camera>
+#include <osg/CoordinateSystemNode>
 #include <osg/Geometry>
 #include <osg/Texture3D>
 
 #include <scivis/callback.h>
 
+#include "def_val.h"
 #include "marching_cube_table.h"
 
 #include "shaders/generated/mc_frag.h"
@@ -50,7 +51,6 @@ class MarchingCubeCPURenderer {
         osg::ref_ptr<osg::Geometry> geom;
         osg::ref_ptr<osg::Geode> geode;
         std::array<osg::ref_ptr<osg::Vec3Array>, 2> vertsBuf;
-        std::array<osg::ref_ptr<osg::Vec3Array>, 2> normsBuf;
 
         osg::ref_ptr<osg::Uniform> minLatitute;
         osg::ref_ptr<osg::Uniform> maxLatitute;
@@ -64,8 +64,6 @@ class MarchingCubeCPURenderer {
             rndrVertsBufIdx = (rndrVertsBufIdx + 1) & 1;
 
             geom->setVertexArray(vertsBuf[rndrVertsBufIdx]);
-            geom->setNormalArray(normsBuf[rndrVertsBufIdx]);
-            geom->setNormalBinding(osg::Geometry::BIND_PER_VERTEX);
 
             geom->getPrimitiveSetList().clear();
             geom->addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::TRIANGLES, 0,
@@ -76,15 +74,10 @@ class MarchingCubeCPURenderer {
         PerVolumeParam(decltype(volDat) volDat, const std::array<int, 3> &volDim,
                        PerRendererParam *renderer)
             : volDat(volDat), volDim(volDim) {
-            static const auto MinHeight = static_cast<float>(osg::WGS_84_RADIUS_EQUATOR) * 1.005f;
-            static const auto MaxHeight = static_cast<float>(osg::WGS_84_RADIUS_EQUATOR) * 1.205f;
-
             voxSz = osg::Vec3(1.f / volDim[0], 1.f / volDim[1], 1.f / volDim[2]);
 
             vertsBuf[0] = new osg::Vec3Array;
             vertsBuf[1] = new osg::Vec3Array;
-            normsBuf[0] = new osg::Vec3Array;
-            normsBuf[1] = new osg::Vec3Array;
 
             geom = new osg::Geometry;
             geode = new osg::Geode;
@@ -97,10 +90,10 @@ class MarchingCubeCPURenderer {
 #define STATEMENT(name, val)                                                                       \
     name = new osg::Uniform(#name, val);                                                           \
     states->addUniform(name)
-            STATEMENT(minLatitute, deg2Rad(-23.f));
-            STATEMENT(maxLatitute, deg2Rad(+23.f));
-            STATEMENT(minLongtitute, deg2Rad(-20.f));
-            STATEMENT(maxLongtitute, deg2Rad(+20.f));
+            STATEMENT(minLatitute, deg2Rad(MinLatitute));
+            STATEMENT(maxLatitute, deg2Rad(MaxLatitute));
+            STATEMENT(minLongtitute, deg2Rad(MinLongtitute));
+            STATEMENT(maxLongtitute, deg2Rad(MaxLongtitute));
             STATEMENT(minHeight, MinHeight);
             STATEMENT(maxHeight, MaxHeight);
 #undef STATEMENT
@@ -161,9 +154,6 @@ class MarchingCubeCPURenderer {
             auto cmptVerts = vertsBuf[(rndrVertsBufIdx + 1) & 1];
             cmptVerts->clear();
             cmptVerts->reserve(vertNum);
-            auto cmptNorms = normsBuf[(rndrVertsBufIdx + 1) & 1];
-            cmptNorms->clear();
-            cmptNorms->reserve(vertNum);
 
             for (size_t i = 0; i < volDat->size(); ++i) {
                 if (voxVertNums[i] == 0)
@@ -219,22 +209,12 @@ class MarchingCubeCPURenderer {
                     return n;
                 };
                 for (uint32_t j = 0; j < voxVertNums[i]; j += 3) {
-                    std::array<osg::Vec3 *, 3> v;
                     auto edge = TriangleTable[cubeIdx][j];
-                    v[0] = &vertList[edge];
+                    cmptVerts->push_back(vertList[edge]);
                     edge = TriangleTable[cubeIdx][j + 1];
-                    v[1] = &vertList[edge];
+                    cmptVerts->push_back(vertList[edge]);
                     edge = TriangleTable[cubeIdx][j + 2];
-                    v[2] = &vertList[edge];
-
-                    cmptVerts->push_back(*v[0]);
-                    cmptVerts->push_back(*v[1]);
-                    cmptVerts->push_back(*v[2]);
-
-                    auto normal = cmptNorm(*v[0], *v[1], *v[2]);
-                    cmptNorms->push_back(normal);
-                    cmptNorms->push_back(normal);
-                    cmptNorms->push_back(normal);
+                    cmptVerts->push_back(vertList[edge]);
                 }
             }
 

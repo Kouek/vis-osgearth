@@ -25,7 +25,6 @@ void main() {
     pos.x = r * cos(lon);
     pos.y = r * sin(lon);
     pos.w = 1.f;
-    //vec4 pos = gl_Vertex;
 
     vertex = gl_Vertex.xyz;
     normal = gl_Normal;

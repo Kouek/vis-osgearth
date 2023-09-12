@@ -30,12 +30,14 @@ endfunction(pack_glsl_to_c)
 
 pack_glsl_to_c("${CMAKE_CURRENT_LIST_DIR}/scalar_viser/shaders")
 
+file(GLOB SRCS "${CMAKE_CURRENT_LIST_DIR}/*/*.cpp")
+
 add_library(
 	${TARGET_NAME}
-	INTERFACE
+	${SRCS}
 )
 target_include_directories(
 	${TARGET_NAME}
-	INTERFACE
+	PUBLIC
 	${CMAKE_CURRENT_LIST_DIR}
 )

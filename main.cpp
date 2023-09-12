@@ -8,7 +8,9 @@
 #include <osgDB/ReadFile>
 #include <osgViewer/Viewer>
 
+#include <graph_viser/graph_layout.h>
 #include <scalar_viser/direct_volume_renderer.h>
+#include <scalar_viser/heat_map_renderer.h>
 #include <scalar_viser/marching_cube_renderer.h>
 #include <volume_loader/raw_loader.h>
 #include <volume_loader/tf_loader.h>
@@ -36,8 +38,12 @@ static inline osg::Node *createEarth() {
     return csn;
 }
 
-// #define TEST_DVR
-#define TEST_MARCHING_CUBE
+ //#define TEST_DVR
+// #define TEST_MARCHING_CUBE
+// #define TEST_HEAT_MAP_2D
+// #define TEST_HEAT_MAP_3D
+// #define TEST_GRAPH_LAYOUT_2D
+#define TEST_GRAPH_LAYOUT_3D
 
 #ifdef TEST_DVR
 int main(int argc, char **argv) {
@@ -47,10 +53,8 @@ int main(int argc, char **argv) {
     osg::ref_ptr grp = new osg::Group;
     grp->addChild(createEarth());
 
-    // Create direct volume renderer
     SciVis::ScalarViser::DirectVolumeRenderer renderer;
 
-    // Prepare volume data
     {
         auto volTex = SciVis::VolumeLoader::RawConvertor<uint8_t>::LoadFromFileToTexture(
             "CLOUDf01.bin", {500, 500, 100}, {8, 8, 6},
@@ -73,10 +77,8 @@ int main(int argc, char **argv) {
     osg::ref_ptr grp = new osg::Group;
     grp->addChild(createEarth());
 
-    // Create direct volume renderer
     SciVis::ScalarViser::MarchingCubeCPURenderer renderer;
 
-    // Prepare volume data
     {
         std::array<int, 3> volDim{500, 500, 100};
         auto volDat = SciVis::VolumeLoader::RawLoader<uint8_t, float>::LoadFromFile(
@@ -89,6 +91,85 @@ int main(int argc, char **argv) {
 
     if (auto opt = renderer.GetVolume("cloud01"); opt.has_value())
         opt.value()->second.MarchingCube(30.f / 255.f);
+
+    viewer->setSceneData(grp);
+    viewer->run();
+
+    return 0;
+}
+#elif defined(TEST_HEAT_MAP_2D)
+int main(int argc, char **argv) {
+    osg::ref_ptr viewer = new osgViewer::Viewer;
+    viewer->setUpViewInWindow(200, 50, 800, 600);
+
+    osg::ref_ptr grp = new osg::Group;
+
+    SciVis::ScalarViser::HeatMap2DRenderer renderer;
+
+    {
+        auto volTex = SciVis::VolumeLoader::RawConvertor<uint8_t>::LoadFromFileToTexture(
+            "CLOUDf01.bin", {500, 500, 100}, {8, 8, 6},
+            [](const uint8_t &src) -> float { return src / 255.f; });
+        auto colTblTex =
+            SciVis::VolumeLoader::TFLoader<uint8_t>::LoadFromFileToTexture("cloud_color_tbl.txt");
+        renderer.AddVolume("cloud01", volTex, colTblTex);
+    }
+    grp->addChild(renderer.GetGroup());
+
+    viewer->setSceneData(grp);
+    viewer->run();
+
+    return 0;
+}
+#elif defined(TEST_HEAT_MAP_3D)
+int main(int argc, char **argv) {
+    osg::ref_ptr viewer = new osgViewer::Viewer;
+    viewer->setUpViewInWindow(200, 50, 800, 600);
+
+    osg::ref_ptr grp = new osg::Group;
+    grp->addChild(createEarth());
+
+    SciVis::ScalarViser::HeatMap3DRenderer renderer;
+
+    {
+        auto volTex = SciVis::VolumeLoader::RawConvertor<uint8_t>::LoadFromFileToTexture(
+            "CLOUDf01.bin", {500, 500, 100}, {8, 8, 6},
+            [](const uint8_t &src) -> float { return src / 255.f; });
+        auto colTblTex =
+            SciVis::VolumeLoader::TFLoader<uint8_t>::LoadFromFileToTexture("cloud_color_tbl.txt");
+        renderer.AddVolume("cloud01", volTex, colTblTex);
+    }
+    grp->addChild(renderer.GetGroup());
+
+    viewer->setSceneData(grp);
+    viewer->run();
+
+    return 0;
+}
+#elif defined(TEST_GRAPH_LAYOUT_2D)
+int main(int argc, char **argv) {
+    osg::ref_ptr viewer = new osgViewer::Viewer;
+    viewer->setUpViewInWindow(200, 50, 800, 600);
+
+    osg::ref_ptr grp = new osg::Group;
+
+    SciVis::GraphViser::GraphLayout2D graphLayout;
+    grp->addChild(graphLayout.GetGroup());
+
+    viewer->setSceneData(grp);
+    viewer->run();
+
+    return 0;
+}
+#elif defined(TEST_GRAPH_LAYOUT_3D)
+int main(int argc, char **argv) {
+    osg::ref_ptr viewer = new osgViewer::Viewer;
+    viewer->setUpViewInWindow(200, 50, 800, 600);
+
+    osg::ref_ptr grp = new osg::Group;
+
+    SciVis::GraphViser::GraphLayout3D graphLayout;
+    grp->addChild(graphLayout.GetGroup());
 
     viewer->setSceneData(grp);
     viewer->run();

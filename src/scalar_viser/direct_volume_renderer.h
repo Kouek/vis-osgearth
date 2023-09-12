@@ -6,13 +6,14 @@
 
 #include <map>
 
-#include <osg/CoordinateSystemNode>
 #include <osg/CullFace>
 #include <osg/ShapeDrawable>
 #include <osg/Texture1D>
 #include <osg/Texture3D>
 
 #include <scivis/callback.h>
+
+#include "def_val.h"
 
 #include "shaders/generated/dvr_sphere_proxy_frag.h"
 #include "shaders/generated/dvr_sphere_proxy_vert.h"
@@ -75,12 +76,10 @@ class DirectVolumeRenderer {
         PerVolParam(osg::ref_ptr<osg::Texture3D> volTex, osg::ref_ptr<osg::Texture1D> tfTex,
                     PerRendererParam *renderer)
             : volTex(volTex), tfTex(tfTex) {
-            static const auto MinHeight = static_cast<float>(osg::WGS_84_RADIUS_EQUATOR) * .5f;
-            static const auto MaxHeight = static_cast<float>(osg::WGS_84_RADIUS_EQUATOR) * .7f;
-
             sphere = new osg::ShapeDrawable(new osg::Sphere(osg::Vec3(0.f, 0.f, 0.f), MaxHeight),
                                             new osg::TessellationHints);
             sphere->setUseVertexBufferObjects(true);
+            sphere->addCullCallback(new Callback(renderer));
 
             auto states = sphere->getOrCreateStateSet();
             auto deg2Rad = [](float deg) {
@@ -89,10 +88,10 @@ class DirectVolumeRenderer {
 #define STATEMENT(name, val)                                                                       \
     name = new osg::Uniform(#name, val);                                                           \
     states->addUniform(name)
-            STATEMENT(minLatitute, deg2Rad(-23.f));
-            STATEMENT(maxLatitute, deg2Rad(+23.f));
-            STATEMENT(minLongtitute, deg2Rad(-20.f));
-            STATEMENT(maxLongtitute, deg2Rad(+20.f));
+            STATEMENT(minLatitute, deg2Rad(MinLatitute));
+            STATEMENT(maxLatitute, deg2Rad(MaxLatitute));
+            STATEMENT(minLongtitute, deg2Rad(MinLongtitute));
+            STATEMENT(maxLongtitute, deg2Rad(MaxLongtitute));
             STATEMENT(minHeight, MinHeight);
             STATEMENT(maxHeight, MaxHeight);
 #undef STATEMENT
@@ -104,7 +103,6 @@ class DirectVolumeRenderer {
 
             osg::ref_ptr cf = new osg::CullFace(osg::CullFace::BACK);
             states->setAttributeAndModes(cf);
-            sphere->addCullCallback(new Callback(renderer));
 
             states->setAttributeAndModes(renderer->program, osg::StateAttribute::ON);
             states->setMode(GL_BLEND, osg::StateAttribute::ON);
