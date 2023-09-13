@@ -80,29 +80,24 @@ void main() {
     r = sqrt(pos.x * pos.x + pos.y * pos.y);
     lat = atan(pos.z / r);
     lon = atan(pos.y, pos.x);
-    if ((entryOutOfRng & 1) != 0 && lat < minLatitute)
-        discard;
-    if ((entryOutOfRng & 2) != 0 && lat > minLatitute)
-        discard;
-    if ((entryOutOfRng & 4) != 0 && lon < minLongtitute)
-        discard;
-    if ((entryOutOfRng & 8) != 0 && lon > minLongtitute)
-        discard;
+    if ((entryOutOfRng & 1) != 0 && lat < minLatitute) {
+        gl_FragColor = vec4(1.f, 0.f, 0.f, 1.f);
+        return;
+    }
+    if ((entryOutOfRng & 2) != 0 && lat > maxLatitute) {
+        gl_FragColor = vec4(0.f, 1.f, 0.f, 1.f);
+        return;
+    }
+    if ((entryOutOfRng & 4) != 0 && lon < minLongtitute) {
+        gl_FragColor = vec4(0.f, 0.f, 1.f, 1.f);
+        return;
+    }
+    if ((entryOutOfRng & 8) != 0 && lon > maxLongtitute) {
+        gl_FragColor = vec4(.5f, .5f, .5f, 1.f);
+        return;
+    }
 
-    float hDlt = maxHeight - minHeight;
-    float latDlt = maxLatitute - minLatitute;
-    float lonDlt = maxLongtitute - minLongtitute;
-
-    pos = vertex;
-    r = sqrt(pos.x * pos.x + pos.y * pos.y);
-    lat = atan(pos.z / r);
-    r = length(pos);
-    lon = atan(pos.y, pos.x);
-    r = (r - minHeight) / hDlt;
-    lat = (lat - minLatitute) / latDlt;
-    lon = (lon - minLongtitute) / lonDlt;
-
-    gl_FragColor = vec4(lon, lat, r, 1);
+    gl_FragColor = vec4(1.f, 1.f, 1.f, 1.f);
 #else
     vec3 d = normalize(vertex - eyePos);
     vec3 pos = vertex;
@@ -131,11 +126,11 @@ void main() {
     lon = atan(pos.y, pos.x);
     if ((entryOutOfRng & 1) != 0 && lat < minLatitute)
         discard;
-    if ((entryOutOfRng & 2) != 0 && lat > minLatitute)
+    if ((entryOutOfRng & 2) != 0 && lat > maxLatitute)
         discard;
     if ((entryOutOfRng & 4) != 0 && lon < minLongtitute)
         discard;
-    if ((entryOutOfRng & 8) != 0 && lon > minLongtitute)
+    if ((entryOutOfRng & 8) != 0 && lon > maxLongtitute)
         discard;
 
     float hDlt = maxHeight - minHeight;

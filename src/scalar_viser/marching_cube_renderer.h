@@ -51,19 +51,15 @@ class MarchingCubeCPURenderer {
         osg::ref_ptr<osg::Geometry> geom;
         osg::ref_ptr<osg::Geode> geode;
         std::array<osg::ref_ptr<osg::Vec3Array>, 2> vertsBuf;
-
-        osg::ref_ptr<osg::Uniform> minLatitute;
-        osg::ref_ptr<osg::Uniform> maxLatitute;
-        osg::ref_ptr<osg::Uniform> minLongtitute;
-        osg::ref_ptr<osg::Uniform> maxLongtitute;
-        osg::ref_ptr<osg::Uniform> minHeight;
-        osg::ref_ptr<osg::Uniform> maxHeight;
+        std::array<osg::ref_ptr<osg::Vec3Array>, 2> normsBuf;
 
       private:
         void swapVertsBuf() {
             rndrVertsBufIdx = (rndrVertsBufIdx + 1) & 1;
 
             geom->setVertexArray(vertsBuf[rndrVertsBufIdx]);
+            geom->setNormalArray(normsBuf[rndrVertsBufIdx]);
+            geom->setNormalBinding(osg::Geometry::BIND_PER_VERTEX);
 
             geom->getPrimitiveSetList().clear();
             geom->addPrimitiveSet(new osg::DrawArrays(osg::PrimitiveSet::TRIANGLES, 0,
@@ -78,27 +74,16 @@ class MarchingCubeCPURenderer {
 
             vertsBuf[0] = new osg::Vec3Array;
             vertsBuf[1] = new osg::Vec3Array;
+            normsBuf[0] = new osg::Vec3Array;
+            normsBuf[1] = new osg::Vec3Array;
 
             geom = new osg::Geometry;
             geode = new osg::Geode;
             geode->addDrawable(geom);
 
             auto states = geode->getOrCreateStateSet();
-            auto deg2Rad = [](float deg) {
-                return deg * static_cast<float>(std::numbers::pi) / 180.f;
-            };
-#define STATEMENT(name, val)                                                                       \
-    name = new osg::Uniform(#name, val);                                                           \
-    states->addUniform(name)
-            STATEMENT(minLatitute, deg2Rad(MinLatitute));
-            STATEMENT(maxLatitute, deg2Rad(MaxLatitute));
-            STATEMENT(minLongtitute, deg2Rad(MinLongtitute));
-            STATEMENT(maxLongtitute, deg2Rad(MaxLongtitute));
-            STATEMENT(minHeight, MinHeight);
-            STATEMENT(maxHeight, MaxHeight);
-#undef STATEMENT
 
-            states->setAttributeAndModes(renderer->program, osg::StateAttribute::ON);
+            //states->setAttributeAndModes(renderer->program, osg::StateAttribute::ON);
         }
 
         void MarchingCube(float isoVal) {
@@ -154,6 +139,9 @@ class MarchingCubeCPURenderer {
             auto cmptVerts = vertsBuf[(rndrVertsBufIdx + 1) & 1];
             cmptVerts->clear();
             cmptVerts->reserve(vertNum);
+            auto cmptNorms = normsBuf[(rndrVertsBufIdx + 1) & 1];
+            cmptNorms->clear();
+            cmptNorms->reserve(vertNum);
 
             for (size_t i = 0; i < volDat->size(); ++i) {
                 if (voxVertNums[i] == 0)
@@ -201,20 +189,42 @@ class MarchingCubeCPURenderer {
                 vertList[10] = vertInterp(v[2], v[6], field[2], field[6]);
                 vertList[11] = vertInterp(v[3], v[7], field[3], field[7]);
 
-                auto cmptNorm = [](const osg::Vec3 &p0, const osg::Vec3 &p1, const osg::Vec3 &p2) {
-                    auto e0 = p1 - p0;
-                    auto e1 = p2 - p1;
-                    auto n = e0 ^ e1;
-                    n.normalize();
-                    return n;
+                auto vec3ToSphere = [&](const osg::Vec3 &v3) {
+                    auto deg2Rad = [](float deg) {
+                        return deg * static_cast<float>(std::numbers::pi) / 180.f;
+                    };
+
+                    auto dlt = deg2Rad(MaxLongtitute) - deg2Rad(MinLongtitute);
+                    auto lon = deg2Rad(MinLongtitute) + v3.x() * dlt;
+                    dlt = deg2Rad(MaxLatitute) - deg2Rad(MinLatitute);
+                    auto lat = deg2Rad(MinLatitute) + v3.y() * dlt;
+                    dlt = MaxHeight - MinHeight;
+                    auto h = MinHeight + v3.z() * dlt;
+
+                    osg::Vec3 ret;
+                    ret.z() = h * std::sinf(lat);
+                    h = h * std::cosf(lat);
+                    ret.y() = h * std::sinf(lon);
+                    ret.x() = h * std::cosf(lon);
+
+                    return ret;
                 };
                 for (uint32_t j = 0; j < voxVertNums[i]; j += 3) {
                     auto edge = TriangleTable[cubeIdx][j];
-                    cmptVerts->push_back(vertList[edge]);
+                    cmptVerts->push_back(vec3ToSphere(vertList[edge]));
                     edge = TriangleTable[cubeIdx][j + 1];
-                    cmptVerts->push_back(vertList[edge]);
+                    cmptVerts->push_back(vec3ToSphere(vertList[edge]));
                     edge = TriangleTable[cubeIdx][j + 2];
-                    cmptVerts->push_back(vertList[edge]);
+                    cmptVerts->push_back(vec3ToSphere(vertList[edge]));
+
+                    auto n = cmptVerts->size();
+                    auto e0 = (*cmptVerts)[n - 2] - (*cmptVerts)[n - 3];
+                    auto e1 = (*cmptVerts)[n - 1] - (*cmptVerts)[n - 3];
+                    e0 = e0 ^ e1;
+                    e0.normalize();
+                    cmptNorms->push_back(e0);
+                    cmptNorms->push_back(e0);
+                    cmptNorms->push_back(e0);
                 }
             }
 

@@ -38,12 +38,12 @@ static inline osg::Node *createEarth() {
     return csn;
 }
 
- //#define TEST_DVR
+#define TEST_DVR
 // #define TEST_MARCHING_CUBE
 // #define TEST_HEAT_MAP_2D
 // #define TEST_HEAT_MAP_3D
 // #define TEST_GRAPH_LAYOUT_2D
-#define TEST_GRAPH_LAYOUT_3D
+// #define TEST_GRAPH_LAYOUT_3D
 
 #ifdef TEST_DVR
 int main(int argc, char **argv) {
@@ -90,7 +90,7 @@ int main(int argc, char **argv) {
     grp->addChild(renderer.GetGroup());
 
     if (auto opt = renderer.GetVolume("cloud01"); opt.has_value())
-        opt.value()->second.MarchingCube(30.f / 255.f);
+        opt.value()->second.MarchingCube(5.f / 255.f);
 
     viewer->setSceneData(grp);
     viewer->run();
